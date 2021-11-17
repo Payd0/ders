@@ -1,4 +1,5 @@
 // A C program to implement Ukkonen's Suffix Tree Construction
+// And then find Longest Repeated Substring
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,7 +40,6 @@ suffix link reset to new internal node created in next
 extension of same phase. */
 Node *lastNewNode = NULL;
 Node *activeNode = NULL;
-int count=0;
 
 /*activeEdge is represented as input string character
 index (not the character itself)*/
@@ -56,7 +56,6 @@ int size = -1; //Length of input string
 
 Node *newNode(int start, int *end)
 {
-	count++;
 	Node *node =(Node*) malloc(sizeof(Node));
 	int i;
 	for (i = 0; i < MAX_CHAR; i++)
@@ -78,6 +77,8 @@ Node *newNode(int start, int *end)
 }
 
 int edgeLength(Node *n) {
+	if(n == root)
+		return 0;
 	return *(n->end) - (n->start) + 1;
 }
 
@@ -90,8 +91,7 @@ int walkDown(Node *currNode)
 	accordingly to represent same activePoint*/
 	if (activeLength >= edgeLength(currNode))
 	{
-		activeEdge =
-		(int)text[activeEdge+edgeLength(currNode)]-(int)' ';
+		activeEdge += edgeLength(currNode);
 		activeLength -= edgeLength(currNode);
 		activeNode = currNode;
 		return 1;
@@ -118,17 +118,16 @@ void extendSuffixTree(int pos)
 	//Add all suffixes (yet to be added) one by one in tree
 	while(remainingSuffixCount > 0) {
 
-		if (activeLength == 0) {
-			//APCFALZ
-			activeEdge = (int)text[pos]-(int)' ';
-		}
+		if (activeLength == 0)
+			activeEdge = pos; //APCFALZ
+
 		// There is no outgoing edge starting with
 		// activeEdge from activeNode
-		if (activeNode->children[activeEdge] == NULL)
+		if (activeNode->children] == NULL)
 		{
 			//Extension Rule 2 (A new leaf edge gets created)
-			activeNode->children[activeEdge] =
-								newNode(pos, &leafEnd);
+			activeNode->children] =
+										newNode(pos, &leafEnd);
 
 			/*A new leaf edge is created in above line starting
 			from an existing node (the current activeNode), and
@@ -149,7 +148,7 @@ void extendSuffixTree(int pos)
 		{
 			// Get the next node at the end of edge starting
 			// with activeEdge
-			Node *next = activeNode->children[activeEdge];
+			Node *next = activeNode->children];
 			if (walkDown(next))//Do walkdown
 			{
 				//Start from next node (the new activeNode)
@@ -187,13 +186,12 @@ void extendSuffixTree(int pos)
 
 			//New internal node
 			Node *split = newNode(next->start, splitEnd);
-			activeNode->children[activeEdge] = split;
+			activeNode->children] = split;
 
 			//New leaf coming out of new internal node
-			split->children[(int)text[pos]-(int)' '] =
-									newNode(pos, &leafEnd);
+			split->children] = newNode(pos, &leafEnd);
 			next->start += activeLength;
-			split->children[activeEdge] = next;
+			split->children] = next;
 
 			/*We got a new internal node here. If there is any
 			internal node created in last extensions of same
@@ -223,12 +221,9 @@ void extendSuffixTree(int pos)
 		if (activeNode == root && activeLength > 0) //APCFER2C1
 		{
 			activeLength--;
-			activeEdge = (int)text[pos -
-							remainingSuffixCount + 1]-(int)' ';
+			activeEdge = pos - remainingSuffixCount + 1;
 		}
-
-		//APCFER2C2
-		else if (activeNode != root)
+		else if (activeNode != root) //APCFER2C2
 		{
 			activeNode = activeNode->suffixLink;
 		}
@@ -252,7 +247,8 @@ void setSuffixIndexByDFS(Node *n, int labelHeight)
 	if (n->start != -1) //A non-root node
 	{
 		//Print the label on edge from parent to current node
-		print(n->start, *(n->end));
+		//Uncomment below line to print suffix tree
+	// print(n->start, *(n->end));
 	}
 	int leaf = 1;
 	int i;
@@ -260,20 +256,22 @@ void setSuffixIndexByDFS(Node *n, int labelHeight)
 	{
 		if (n->children[i] != NULL)
 		{
-			if (leaf == 1 && n->start != -1)
-				printf(" [%d]\n", n->suffixIndex);
+			//Uncomment below two lines to print suffix index
+		// if (leaf == 1 && n->start != -1)
+			// printf(" [%d]\n", n->suffixIndex);
 
 			//Current node is not a leaf as it has outgoing
 			//edges from it.
 			leaf = 0;
-			setSuffixIndexByDFS(n->children[i],
-				labelHeight + edgeLength(n->children[i]));
+			setSuffixIndexByDFS(n->children[i], labelHeight +
+								edgeLength(n->children[i]));
 		}
 	}
 	if (leaf == 1)
 	{
 		n->suffixIndex = size - labelHeight;
-		printf(" [%d]\n", n->suffixIndex);
+		//Uncomment below line to print suffix index
+		//printf(" [%d]\n", n->suffixIndex);
 	}
 }
 
@@ -313,103 +311,104 @@ void buildSuffixTree()
 		extendSuffixTree(i);
 	int labelHeight = 0;
 	setSuffixIndexByDFS(root, labelHeight);
-
-	//Free the dynamically allocated memory
-	freeSuffixTreeByPostOrder(root);
 }
+
 void doTraversal(Node *n, int labelHeight, int* maxHeight,
 int* substringStartIndex)
 {
-    if(n == NULL)
-    {
-        return;
-    }
-    int i=0;
-    if(n->suffixIndex == -1) //If it is internal node
-    {
-        for (i = 0; i < MAX_CHAR; i++)
-        {
-            if(n->children[i] != NULL)
-            {
-                doTraversal(n->children[i], labelHeight +
-                                edgeLength(n->children[i]), maxHeight,
-                                 substringStartIndex);
-            }
-        }
-    }
-    else if(n->suffixIndex > -1 &&
-                (*maxHeight < labelHeight - edgeLength(n)))
-    {
-        *maxHeight = labelHeight - edgeLength(n);
-        *substringStartIndex = n->suffixIndex;
-    }
+	if(n == NULL)
+	{
+		return;
+	}
+	int i=0;
+	if(n->suffixIndex == -1) //If it is internal node
+	{
+		for (i = 0; i < MAX_CHAR; i++)
+		{
+			if(n->children[i] != NULL)
+			{
+				doTraversal(n->children[i], labelHeight +
+								edgeLength(n->children[i]), maxHeight,
+								substringStartIndex);
+			}
+		}
+	}
+	else if(n->suffixIndex > -1 &&
+				(*maxHeight < labelHeight - edgeLength(n)))
+	{
+		*maxHeight = labelHeight - edgeLength(n);
+		*substringStartIndex = n->suffixIndex;
+	}
 }
 
 void getLongestRepeatedSubstring()
 {
-    int maxHeight = 0;
-    int substringStartIndex = 0;
-    doTraversal(root, 0, &maxHeight, &substringStartIndex);
-//    printf("maxHeight %d, substringStartIndex %d\n", maxHeight,
-//           substringStartIndex);
-    printf("Longest Repeated Substring in %s is: ", text);
-    int k;
-    for (k=0; k<maxHeight; k++)
-        printf("%c", text[k + substringStartIndex]);
-    if(k == 0)
-        printf("No repeated substring");
-    printf("\n");
+	int maxHeight = 0;
+	int substringStartIndex = 0;
+	doTraversal(root, 0, &maxHeight, &substringStartIndex);
+// printf("maxHeight %d, substringStartIndex %d\n", maxHeight,
+//		 substringStartIndex);
+	printf("Longest Repeated Substring in %s is: ", text);
+	int k;
+	for (k=0; k<maxHeight; k++)
+		printf("%c", text[k + substringStartIndex]);
+	if(k == 0)
+		printf("No repeated substring");
+	printf("\n");
 }
 
-int main(int argc, char *argv[]){
-    strcpy(text, "GEEKSFORGEEKS$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+// driver program to test above functions
+int main(int argc, char *argv[])
+{
+	strcpy(text, "GEEKSFORGEEKS$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    strcpy(text, "AAAAAAAAAA$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+	strcpy(text, "AAAAAAAAAA$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    strcpy(text, "ABCDEFG$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+	strcpy(text, "ABCDEFG$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    strcpy(text, "ABABABA$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+	strcpy(text, "ABABABA$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    strcpy(text, "ATCGATCGA$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+	strcpy(text, "ATCGATCGA$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    strcpy(text, "banana$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+	strcpy(text, "banana$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    strcpy(text, "abcpqrabpqpq$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+	strcpy(text, "abcpqrabpqpq$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    strcpy(text, "pqrpqpqabab$");
-    buildSuffixTree();
-    getLongestRepeatedSubstring();
-    //Free the dynamically allocated memory
-    freeSuffixTreeByPostOrder(root);
+	strcpy(text, "pqrpqpqabab$");
+	buildSuffixTree();
+	getLongestRepeatedSubstring();
+	//Free the dynamically allocated memory
+	freeSuffixTreeByPostOrder(root);
 
-    return 0;
+	return 0;
 }
+
 
